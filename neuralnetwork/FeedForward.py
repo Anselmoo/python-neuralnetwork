@@ -12,6 +12,7 @@ class FeedForward:
     weights = np.array([])
     biasWeights = np.array([])
     values = np.array([])
+    
 
     def __init__(self, networkLayers, activation, dtype=np.float64):
         """__init__.
@@ -39,7 +40,8 @@ class FeedForward:
                     "end_node": endNode - 1,
                 }
             )
-        self.totalNumNodes = np.sum(networkLayers)
+
+        self.totalNumNodes = np.sum(networkLayers, dtype=np.int)
         self.activation = activation
         self.dtype = dtype
 
@@ -116,22 +118,22 @@ class FeedForward:
         self.values[0:_end] = inputs[0:_end]
 
         # Connecting the layers (input, hidden, and target) via j-index
-        for i, layer in enumerate(self.networkLayers[1:]):
+        for k, layer in enumerate(self.networkLayers[1:]):
             # Prevouis layer
-            j = np.arange(
-                self.networkLayers[i]["start_node"],
-                self.networkLayers[i]["end_node"] + 1,
-            )
+            i_0, i_1 = self.getPreviousLayer(self.networkLayers, index=k)
+
             # Current layer
-            k = np.arange(layer["start_node"], layer["end_node"] + 1)
+            j_0, j_1 = self.getCurrentLayer(layer)
 
             # Apply feedback transformation
-            self.net[k] = np.add(
-                self.biasWeights[i, k], np.dot(self.values[j], self.weights[j, k])
+
+            self.net[j_0:j_1] = np.add(
+                self.biasWeights[k, j_0:j_1],
+                np.dot(self.values[i_0:i_1], self.weights[i_0:i_1, j_0:j_1]),
             )
 
             # Apply activation function
-            self.values[k] = self.activation.getActivation(self.net[k])
+            self.values[j_0:j_1] = self.activation.getActivation(self.net[j_0:j_1])
 
     def getOutputs(self):
         """getOutputs returns the predicted values
@@ -144,6 +146,8 @@ class FeedForward:
         startNode = self.networkLayers[len(self.networkLayers) - 1]["start_node"]
         endNode = self.networkLayers[len(self.networkLayers) - 1]["end_node"]
         return self.values[startNode : endNode + 1]
+    
+ 
 
     def getNetworkLayers(self):
         """getNetworkLayers.
@@ -301,8 +305,10 @@ class FeedForward:
         weight : array
             updated weight-coefficients
         """
-        self.weights[i, j] += weight
-        #self.weights[i, j] = np.add(self.weights[i, j], weight, dtype=self.dtype)
+        # self.weights[i, j] += weight
+        self.weights[i[0] : i[1], j[0] : j[1]] = np.add(
+            self.weights[i[0] : i[1], j[0] : j[1]], weight, dtype=self.dtype
+        )
 
     def updateBiasWeight(self, i, j, weight):
         """
@@ -319,10 +325,15 @@ class FeedForward:
         weight : array
              updated bias-weight-coefficients
         """
-        self.biasWeights[i, j]  += weight
-        #self.biasWeights[i, j] = np.add(
-        #    self.biasWeights[i, j], weight, dtype=self.dtype
-        #)
+        # self.biasWeights[i, j] += weight
+        if isinstance(i, int):
+            self.biasWeights[i, j[0] : j[1]] = np.add(
+                self.biasWeights[i, j[0] : j[1]], weight, dtype=self.dtype
+            )
+        else:
+            self.biasWeights[i[0] : i[1], j[0] : j[1]] = np.add(
+                self.biasWeights[i[0] : i[1], j[0] : j[1]], weight, dtype=self.dtype
+            )
 
     def getTotalNumNodes(self):
         """getTotalNumNodes.
@@ -350,6 +361,51 @@ class FeedForward:
         """
         with open(filename, "wb") as network_file:
             pickle.dump(self, network_file)
+
+    @staticmethod
+    def getPreviousLayer(layer, index, ext=+1):
+        """getPreviousLayer start and end point of previous layer.
+        
+        Parameters
+        ----------
+        layer : dict
+            Dictonary of the previous layer
+        index : int
+            index to select of the previous layer
+        ext: int, optional
+            Extend the layer-range, by default +1
+
+        
+        Returns
+        -------
+        i_0 : int
+            startpoint of the previous layer
+        
+        i_1 : int
+            endpoint of the previous layer
+        """
+        i_0, i_1 = layer[index]["start_node"], layer[index]["end_node"] + ext
+        return i_0, i_1
+
+    @staticmethod
+    def getCurrentLayer(layer):
+        """getCurrentLayer start and end point of current layer.
+        
+        Parameters
+        ----------
+        layer : dict
+            Dictonary of the current layer
+        
+        Returns
+        -------
+        i_0 : int
+            startpoint of the current layer
+        
+        i_1 : int
+            endpoint of the current layer
+        """
+        i_0, i_1 = layer["start_node"], layer["end_node"] + 1
+        return i_0, i_1
 
     @staticmethod
     def load(filename):
