@@ -1,4 +1,13 @@
 Activation/__pycache__/__init__.cpython-37.pyc
 Activation/__pycache__/Sigmoid.cpython-37.pyc
 Network/__pycache__/__init__.cpython-37.pyc
+build/
+dist/
+test/*csv
+neuralnetwork.egg-info/
 Train/__pycache__/__init__.cpython-37.pyc
+/neuralnetwork/local_test.py
+/neuralnetwork/__pycache__
+/networkLayer.txt
+/test/network.txt
+/test/networkLayer.txt
